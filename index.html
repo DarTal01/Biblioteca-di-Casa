@@ -1190,12 +1190,30 @@ async function doISBN(){
       }catch{}
     }
 
-    // Tentativo 3: Open Library jscmd=data (fallback originale)
+    // Tentativo 3: Open Library search.json — copertura molto più ampia, ottimo per libri italiani
     if(!found){
       try{
-        const olRes2=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
-        const olData2=await olRes2.json();
-        const b=olData2[`ISBN:${isbn}`];
+        const olRes2=await fetch(`https://openlibrary.org/search.json?isbn=${isbn}&limit=1`);
+        if(olRes2.ok){
+          const olData2=await olRes2.json();
+          const doc=olData2.docs?.[0];
+          if(doc){
+            title=doc.title||'';
+            author=(doc.author_name||[])[0]||'';
+            year=doc.first_publish_year?String(doc.first_publish_year):'';
+            if(doc.cover_i) cover=`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
+            if(title) found=true;
+          }
+        }
+      }catch{}
+    }
+
+    // Tentativo 4: Open Library jscmd=data (fallback originale)
+    if(!found){
+      try{
+        const olRes3=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+        const olData3=await olRes3.json();
+        const b=olData3[`ISBN:${isbn}`];
         if(b){
           title=b.title||''; author=b.authors?.[0]?.name||'';
           cover=b.cover?.large||b.cover?.medium||b.cover?.small||'';
