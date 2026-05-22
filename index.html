@@ -663,6 +663,8 @@ textarea.fi{resize:vertical;min-height:80px;}
 </div>
 
 <div id="toast"></div>
+<!-- dissolvenza ingresso: buio → stanza si illumina -->
+<div id="entrance" style="position:fixed;inset:0;background:#0d0603;z-index:2000;pointer-events:none;opacity:1;transition:opacity 1.4s ease .1s"></div>
 
 <!-- ── PORTRAIT LOCK (mobile) ─────────────────────────────── -->
 <div id="rotate-msg">
@@ -1451,6 +1453,18 @@ function renderStats(){
     <div class="stat-sec-title">📅 ${curYear} — mese per mese</div>
     <div class="sparkline">${sparkBars}</div>`:''}`;
 }
+
+// ── DISSOLVENZA INGRESSO ──────────────────────────────────────────────────────
+(function(){
+  var el=document.getElementById('entrance');
+  if(!el)return;
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      el.style.opacity='0';
+      setTimeout(function(){el.remove();},1600);
+    });
+  });
+})();
 
 // ── CICLO GIORNO / NOTTE ─────────────────────────────────────────────────────
 const SKIES = {
