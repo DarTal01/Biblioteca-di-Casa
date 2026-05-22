@@ -75,10 +75,15 @@ header h1{font-size:1.4rem;text-shadow:2px 2px 0 #2e1508;white-space:nowrap;}
 }
 /* ── mobile landscape ── */
 @media screen and (orientation:landscape) and (max-height:520px){
-  #lib{padding:0 24px 58px;justify-content:space-between;}
+  #lib{padding:0 24px 8px;justify-content:space-between;}
   .bcwrap{transform:scale(.62);transform-origin:bottom center;
     margin-top:calc(-0.38 * (8 * 64px + 68px));}
   .bclbl{font-size:.6rem;}
+  /* caminetto: scala senza spostarlo dal fondo */
+  .fireplace{transform:translateX(-50%) scale(.42);transform-origin:bottom center;}
+  /* tappeto e bagliore ambientale: nascosti, sovrastano le librerie */
+  .rug{display:none;}
+  .fp-ambient{display:none;}
 }
 /* ── desktop medio ── */
 @media screen and (max-width:1100px) and (min-width:769px){
@@ -1143,14 +1148,63 @@ async function doISBN(){
   const st=document.getElementById('ai-st'), pv=document.getElementById('ai-pv');
   st.className='isbn-st ld'; st.textContent='🔍 Ricerca in corso…'; pv.classList.remove('show');
   try{
-    const res=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
-    const data=await res.json();
-    const b=data[`ISBN:${isbn}`];
-    if(b){
-      const title=b.title||'', author=b.authors?.[0]?.name||'';
-      const cover=b.cover?.large||b.cover?.medium||b.cover?.small||'';
-      const year=typeof b.publish_date==='string'?b.publish_date.replace(/\D/g,'').slice(0,4):'';
-      const desc=typeof b.notes==='string'?b.notes:(b.excerpts?.[0]?.text||'');
+    let title='', author='', cover='', year='', desc='', found=false;
+
+    // Tentativo 1: Google Books (copertura vastissima, nessuna chiave richiesta)
+    try{
+      const gRes=await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`);
+      const gData=await gRes.json();
+      const vi=gData?.items?.[0]?.volumeInfo;
+      if(vi){
+        title=vi.title||'';
+        author=(vi.authors||[])[0]||'';
+        year=(vi.publishedDate||'').slice(0,4);
+        desc=vi.description||'';
+        cover=(vi.imageLinks?.thumbnail||vi.imageLinks?.smallThumbnail||'')
+          .replace('http://','https://').replace('zoom=1','zoom=0');
+        if(title) found=true;
+      }
+    }catch{}
+
+    // Tentativo 2: Open Library /isbn/{isbn}.json (più completo di jscmd=data)
+    if(!found){
+      try{
+        const olRes=await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
+        if(olRes.ok){
+          const olData=await olRes.json();
+          title=olData.title||'';
+          year=typeof olData.publish_date==='string'?olData.publish_date.replace(/\D/g,'').slice(0,4):'';
+          desc=typeof olData.notes==='string'?olData.notes:'';
+          if(olData.covers?.[0])
+            cover=`https://covers.openlibrary.org/b/id/${olData.covers[0]}-L.jpg`;
+          if(olData.authors?.[0]?.key){
+            try{
+              const aRes=await fetch(`https://openlibrary.org${olData.authors[0].key}.json`);
+              if(aRes.ok){ const aD=await aRes.json(); author=aD.name||aD.personal_name||''; }
+            }catch{}
+          }
+          if(title) found=true;
+        }
+      }catch{}
+    }
+
+    // Tentativo 3: Open Library jscmd=data (fallback originale)
+    if(!found){
+      try{
+        const olRes2=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+        const olData2=await olRes2.json();
+        const b=olData2[`ISBN:${isbn}`];
+        if(b){
+          title=b.title||''; author=b.authors?.[0]?.name||'';
+          cover=b.cover?.large||b.cover?.medium||b.cover?.small||'';
+          year=typeof b.publish_date==='string'?b.publish_date.replace(/\D/g,'').slice(0,4):'';
+          desc=typeof b.notes==='string'?b.notes:(b.excerpts?.[0]?.text||'');
+          if(title) found=true;
+        }
+      }catch{}
+    }
+
+    if(found){
       document.getElementById('ai-tit').value=title;
       document.getElementById('ai-aut').value=author;
       document.getElementById('ai-yr').value=year;
