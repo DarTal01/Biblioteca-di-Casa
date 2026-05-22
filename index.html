@@ -75,19 +75,13 @@ header h1{font-size:1.4rem;text-shadow:2px 2px 0 #2e1508;white-space:nowrap;}
   overflow:hidden;
   flex-wrap:nowrap;
 }
-/* ── mobile landscape: telefoni piccoli ── */
-@media screen and (orientation:landscape) and (max-height:520px){
-  #lib{padding:0 24px 8px;justify-content:space-between;}
-  .bcwrap{transform:scale(.62);transform-origin:bottom center;
-    margin-top:calc(-0.38 * (8 * 64px + 68px));}
-  .bclbl{font-size:.6rem;}
-}
-/* ── tutti i touch in landscape (telefoni + tablet): nascondi decorazioni ── */
+/* ── tutti i touch in landscape: scala librerie, nascondi decorazioni ── */
 @media screen and (orientation:landscape) and (pointer:coarse){
-  .rug{display:none;}
-  .fp-ambient{display:none;}
-  .window{display:none;}
-  .fireplace{display:none;}
+  #lib{padding:0 20px 8px;justify-content:space-between;}
+  .bcwrap{transform:scale(.52);transform-origin:bottom center;
+    margin-top:calc(-0.48 * (8 * 50px + 68px));}
+  .bclbl{font-size:.6rem;}
+  .fireplace,.rug,.fp-ambient,.window{display:none;}
 }
 /* ── desktop medio ── */
 @media screen and (max-width:1100px) and (min-width:769px){
