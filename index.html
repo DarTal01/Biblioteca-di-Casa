@@ -75,8 +75,9 @@ header h1{font-size:1.4rem;text-shadow:2px 2px 0 #2e1508;white-space:nowrap;}
   overflow:hidden;
   flex-wrap:nowrap;
 }
-/* ── tutti i touch in landscape: scala librerie, nascondi decorazioni ── */
-@media screen and (orientation:landscape) and (pointer:coarse){
+/* ── touch in landscape (hover:none = touch screen) ── */
+@media screen and (orientation:landscape) and (hover:none),
+       screen and (orientation:landscape) and (max-height:900px) and (max-width:1366px){
   #lib{padding:0 20px 8px;justify-content:space-between;}
   .bcwrap{transform:scale(.52);transform-origin:bottom center;
     margin-top:calc(-0.48 * (8 * 50px + 68px));}
@@ -267,7 +268,8 @@ textarea.fi{resize:vertical;min-height:80px;}
   0%,40%{transform:rotate(0deg);}
   60%,100%{transform:rotate(90deg);}
 }
-@media screen and (orientation:portrait) and (pointer:coarse){
+@media screen and (orientation:portrait) and (hover:none),
+       screen and (orientation:portrait) and (max-width:1024px){
   #rotate-msg{display:flex;}
 }
 
