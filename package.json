@@ -1,0 +1,12 @@
+{
+  "name": "biblioteca-di-casa",
+  "version": "1.0.0",
+  "description": "Biblioteca di casa — catalogo libri con recensioni",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

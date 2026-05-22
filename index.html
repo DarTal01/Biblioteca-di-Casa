@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📚 Biblioteca di Casa</title>
+<style>
+:root{
+  --wood:#4a2810; --wood2:#7a5230; --wood3:#a07040;
+  /* altezza cella: nessun padding → riempie tutto lo schermo */
+  --ch: clamp(64px, calc((100vh - 148px) / 8), 114px);
+  --shelf:#c8956a; --drawer:#9a7055;
+  --bg:#fdf5e4; --card:#fffdf0;
+  --text:#2c1a0e; --text2:#7a5535;
+  --accent:#c05018; --accent2:#e8864a;
+  --green:#3d8c5a; --star:#e6a817; --r:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:Georgia,serif;color:var(--text);min-height:100vh;
+  /* Parete rustica: intonaco caldo + mattoni in prospettiva sfumata */
+  background-color:#e8d9be;
+  background-image:
+    /* mattoni — SVG tile 80×40: riga dispari + riga pari sfalsata */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'%3E%3Crect x='1' y='1' width='37' height='17' rx='2' fill='%23a85235' fill-opacity='0.13'/%3E%3Crect x='40' y='1' width='38' height='17' rx='2' fill='%23b05a3a' fill-opacity='0.11'/%3E%3Crect x='0' y='21' width='19' height='17' rx='2' fill='%23a85235' fill-opacity='0.12'/%3E%3Crect x='21' y='21' width='37' height='17' rx='2' fill='%23b05a3a' fill-opacity='0.14'/%3E%3Crect x='60' y='21' width='20' height='17' rx='2' fill='%23a85235' fill-opacity='0.11'/%3E%3C/svg%3E"),
+    /* vignetta scura ai bordi per profondità */
+    radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(50,22,8,.08) 100%);
+  background-size: 80px 40px, 100% 100%;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  /* sfumatura verticale: più scuro in alto (soffitto), più caldo in basso (luce fuoco) */
+  background:linear-gradient(to bottom,
+    rgba(40,18,5,.06) 0%,
+    transparent 30%,
+    transparent 65%,
+    rgba(200,90,10,.04) 100%);
+}
+
+/* ── HEADER ── */
+header{background:var(--wood);color:#f5deb3;padding:11px 20px;display:flex;
+  align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:3px solid #2e1508;box-shadow:0 3px 8px rgba(0,0,0,.35);
+  position:sticky;top:0;z-index:30;}
+header h1{font-size:1.4rem;text-shadow:2px 2px 0 #2e1508;white-space:nowrap;}
+.hright{display:flex;align-items:center;gap:8px;}
+#conn{font-size:.72rem;padding:3px 8px;border-radius:10px;
+  background:rgba(0,0,0,.3);color:#c4956a;white-space:nowrap;}
+#conn.ok{color:#7fe0a0;}
+#conn.err{color:#ff8080;}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 15px;border-radius:20px;border:2px solid;cursor:pointer;
+  font-size:.84rem;font-family:Georgia,serif;
+  transition:transform .1s,filter .1s;box-shadow:2px 2px 0 rgba(30,10,0,.3);}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.1);}
+.btn:active{transform:translateY(1px);box-shadow:none;}
+.btn-primary {background:var(--accent); border-color:#8a3010;color:#fff;}
+.btn-secondary{background:var(--card);  border-color:var(--wood2);color:var(--text);}
+.btn-danger  {background:#c0392b;       border-color:#8a2820;color:#fff;}
+.btn-music   {background:var(--accent2);border-color:var(--accent);color:#fff;}
+.btn-music.on{background:var(--green);  border-color:#2a6b42;}
+.btn-sm  {padding:4px 11px;font-size:.78rem;}
+.btn-full{width:100%;text-align:center;display:block;}
+
+/* ── LIBRERIA ── */
+#lib{
+  position:relative;z-index:3;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  padding:0 80px 0;             /* fondo a terra, come il caminetto */
+  min-height:calc(100vh - 58px);
+  flex-wrap:nowrap;
+}
+/* ── mobile landscape ── */
+@media screen and (orientation:landscape) and (max-height:520px){
+  #lib{padding:0 24px 58px;justify-content:space-between;}
+  .bcwrap{transform:scale(.62);transform-origin:bottom center;
+    margin-top:calc(-0.38 * (8 * 64px + 68px));}
+  .bclbl{font-size:.6rem;}
+}
+/* ── desktop medio ── */
+@media screen and (max-width:1100px) and (min-width:769px){
+  #lib{padding:40px 40px 92px;}
+}
+.bcwrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.bclbl{font-size:.72rem;font-weight:bold;color:var(--wood2);
+  text-transform:uppercase;letter-spacing:2px;}
+.bc{background:var(--wood);padding:8px 8px 6px;border-radius:4px;
+  border:3px solid #2e1508;
+  box-shadow:7px 7px 0 #2e1508,inset 0 0 30px rgba(0,0,0,.15);
+  display:flex;flex-direction:column;gap:4px;}
+.bbd{height:10px;background:var(--wood3);border-radius:2px;}
+.bbd.t{margin-bottom:2px;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+.bbd.b{margin-top:2px; box-shadow:inset 0 2px 4px rgba(0,0,0,.2);}
+.srow{display:flex;gap:4px;}
+
+/* ── CELLA RIPIANO ── */
+.sc{width:88px;height:var(--ch);background:var(--shelf);border-radius:2px 2px 0 0;
+  cursor:pointer;position:relative;overflow:hidden;
+  display:flex;align-items:flex-end;padding:0 3px 5px;
+  border-top:2px solid var(--wood3);
+  border-left:1px solid rgba(0,0,0,.08);border-right:1px solid rgba(0,0,0,.08);
+  transition:filter .15s,transform .1s;user-select:none;}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;
+  height:5px;background:var(--wood2);}
+.sc:hover{filter:brightness(1.13);transform:translateY(-2px);}
+.sc:hover .sc-h{opacity:1;}
+.sc-h{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+  font-size:1.6rem;opacity:0;transition:opacity .15s;
+  color:rgba(60,30,10,.28);pointer-events:none;}
+.sc-n{position:absolute;top:4px;right:4px;background:var(--accent);
+  color:#fff;font-size:8px;padding:1px 5px;border-radius:9px;
+  font-family:sans-serif;font-weight:bold;line-height:1.5;z-index:1;}
+.bprev{display:flex;align-items:flex-end;gap:2px;height:calc(var(--ch) - 14px);overflow:hidden;width:100%;}
+.spine{border-radius:1px 2px 0 0;border-right:1px solid rgba(0,0,0,.22);
+  border-top:1px solid rgba(255,255,255,.18);flex-shrink:0;}
+
+/* ── CASSETTO ── */
+.sc.drw{background:var(--drawer);cursor:default;align-items:center;
+  justify-content:center;flex-direction:column;gap:4px;border:2px solid var(--wood2);}
+.sc.drw::after{display:none;}
+.sc.drw:hover{filter:none;transform:none;}
+.drw-h{width:36px;height:7px;background:linear-gradient(to bottom,#c4956a,#8a6040);
+  border-radius:3px;border:1px solid #6a4a28;
+  box-shadow:0 2px 4px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);}
+.drw-l{font-size:7px;color:#c8a070;letter-spacing:1px;text-transform:uppercase;}
+
+/* ── MODALI ── */
+.ov{display:none;position:fixed;inset:0;background:rgba(20,8,0,.6);
+  align-items:center;justify-content:center;padding:14px;}
+.ov.show{display:flex;}
+.modal{background:var(--card);border-radius:var(--r);padding:24px;
+  width:100%;max-width:540px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,.45),4px 4px 0 var(--wood);
+  border:2px solid var(--wood);}
+.modal.wide{max-width:640px;}
+.mh{display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:18px;gap:12px;}
+.mt{font-size:1.12rem;color:var(--wood);line-height:1.3;}
+.mx{background:none;border:none;font-size:1.3rem;cursor:pointer;
+  color:var(--text2);padding:0 4px;line-height:1;flex-shrink:0;}
+.mx:hover{color:var(--accent);}
+.ma{display:flex;justify-content:flex-end;gap:8px;
+  margin-top:18px;padding-top:14px;border-top:1px solid #e8d8c0;}
+.hr{border:none;border-top:1px solid #e8d8c0;margin:14px 0;}
+
+/* ── LISTA LIBRI (ripiano) ── */
+.blist{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.brow{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:#fff;border-radius:var(--r);border:1px solid #e8d8c0;
+  cursor:pointer;transition:box-shadow .1s,transform .1s;}
+.brow:hover{box-shadow:2px 2px 8px rgba(0,0,0,.12);transform:translateX(2px);}
+.bthumb{width:34px;height:50px;object-fit:cover;border-radius:2px;
+  flex-shrink:0;border:1px solid #ddd;}
+.bph{width:34px;height:50px;border-radius:2px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:17px;}
+.binfo{flex:1;min-width:0;}
+.btit{font-size:.9rem;font-weight:bold;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.baut{font-size:.75rem;color:var(--text2);font-style:italic;}
+.rdots{display:flex;gap:3px;margin-top:4px;}
+.rdot{width:8px;height:8px;border-radius:50%;background:#e0d0c0;}
+.rdot.yes{background:var(--green);}
+.empty{text-align:center;padding:28px 16px;color:var(--text2);
+  font-style:italic;font-size:.88rem;}
+
+/* ── DETTAGLIO LIBRO ── */
+.bd-top{display:flex;gap:16px;margin-bottom:16px;}
+.bcov{width:90px;height:132px;object-fit:cover;border-radius:4px;
+  border:2px solid #e0c9a8;flex-shrink:0;box-shadow:3px 3px 8px rgba(0,0,0,.2);}
+.bcov-ph{width:90px;height:132px;border-radius:4px;border:2px solid #e0c9a8;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.bmeta h2{font-size:1.1rem;color:var(--wood);margin-bottom:3px;}
+.bauth{font-style:italic;color:var(--text2);font-size:.88rem;margin-bottom:6px;}
+.isbn-tag{font-size:.7rem;color:var(--text2);font-family:monospace;
+  background:#f0e8d8;padding:2px 6px;border-radius:4px;display:inline-block;margin-bottom:5px;}
+.bdesc{font-size:.8rem;line-height:1.5;color:var(--text2);margin-top:6px;}
+
+/* ── SCHEDE RECENSIONI ── */
+.rev-sec h3{font-size:.9rem;color:var(--wood2);margin-bottom:10px;
+  padding-bottom:5px;border-bottom:2px solid #e8d8c0;}
+.rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mcard{background:#fff;border:1.5px solid #e8d8c0;border-radius:var(--r);
+  padding:10px 12px;cursor:pointer;transition:box-shadow .1s,border-color .1s;}
+.mcard:hover{box-shadow:2px 2px 8px rgba(0,0,0,.1);border-color:var(--wood3);}
+.mcard.has{border-color:var(--wood3);border-width:2px;}
+.mcard-name{font-size:.9rem;font-weight:bold;color:var(--text);
+  display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.avat{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;color:#fff;font-weight:bold;flex-shrink:0;}
+.mstatus{font-size:.72rem;color:var(--text2);}
+.mstatus.yes{color:var(--green);font-weight:bold;}
+.mstars{display:flex;gap:1px;margin-top:3px;}
+.mstar{font-size:12px;color:#ddd;}
+.mstar.on{color:var(--star);}
+.rsnip{font-size:.73rem;color:var(--text2);font-style:italic;
+  margin-top:4px;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.mhint{font-size:.7rem;color:#bbb;margin-top:3px;}
+
+/* ── FORM ── */
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:13px;}
+.fl{font-size:.82rem;font-weight:bold;color:var(--wood2);}
+.fi{padding:8px 11px;border:2px solid #e0c9a8;border-radius:6px;
+  font-size:.88rem;font-family:Georgia,serif;background:#fff;
+  color:var(--text);transition:border-color .15s;width:100%;}
+.fi:focus{outline:none;border-color:var(--wood2);}
+textarea.fi{resize:vertical;min-height:80px;}
+.isbn-row{display:flex;gap:8px;}
+.isbn-row .fi{flex:1;}
+.isbn-st{font-size:.78rem;padding:3px 0;min-height:18px;}
+.isbn-st.ok{color:var(--green);}
+.isbn-st.err{color:#e74c3c;}
+.isbn-st.ld{color:var(--text2);}
+.iprev{display:none;background:#f5f0e8;border:1px solid #e0c9a8;
+  border-radius:6px;padding:9px 11px;gap:10px;align-items:center;margin-top:3px;}
+.iprev.show{display:flex;}
+.spick{display:flex;gap:2px;}
+.sb{background:none;border:none;font-size:1.45rem;cursor:pointer;
+  transition:transform .1s;line-height:1;}
+.sb:hover{transform:scale(1.2);}
+.cbrow{display:flex;align-items:center;gap:7px;}
+.cbrow input{width:16px;height:16px;cursor:pointer;accent-color:var(--green);}
+
+/* ── PLAYER MUSICA ── */
+#mpanel{position:fixed;bottom:0;right:24px;width:320px;
+  background:var(--wood);border-radius:10px 10px 0 0;
+  border:2px solid #2e1508;border-bottom:none;
+  box-shadow:0 -4px 20px rgba(0,0,0,.4);z-index:20;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);}
+#mpanel.open{transform:translateY(0);}
+.mph{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;color:#f5deb3;cursor:pointer;user-select:none;}
+.mph span{font-size:.88rem;}
+.mph button{background:none;border:none;color:#c4956a;font-size:1.1rem;cursor:pointer;}
+.mph button:hover{color:#f5deb3;}
+#yt{display:block;width:320px;height:180px;border:none;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--wood);color:#f5deb3;padding:9px 22px;border-radius:22px;
+  font-size:.88rem;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:transform .28s;
+  z-index:600;pointer-events:none;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+::-webkit-scrollbar{width:7px;}
+::-webkit-scrollbar-track{background:#f0e8d8;}
+::-webkit-scrollbar-thumb{background:var(--wood2);border-radius:4px;}
+
+/* ── SCHERMO PORTRAIT (solo mobile) ── */
+#rotate-msg{
+  display:none;
+  position:fixed;inset:0;z-index:3000;
+  background:var(--wood);
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;color:#f5deb3;text-align:center;padding:30px;
+}
+#rotate-msg .r-icon{font-size:4rem;animation:spin90 2s ease-in-out infinite;}
+#rotate-msg h2{font-size:1.3rem;text-shadow:1px 1px 0 #2e1508;}
+#rotate-msg p{font-size:.9rem;color:#c4956a;line-height:1.6;}
+@keyframes spin90{
+  0%,40%{transform:rotate(0deg);}
+  60%,100%{transform:rotate(90deg);}
+}
+@media screen and (orientation:portrait) and (max-width:900px){
+  #rotate-msg{display:flex;}
+}
+
+/* ── STATISTICHE ── */
+.stat-hero{text-align:center;padding:14px 0 6px;}
+.stat-big{font-size:2.8rem;font-weight:bold;color:var(--wood);line-height:1;}
+.stat-big-lbl{font-size:.88rem;color:var(--text2);margin-top:3px;}
+.stat-big-sub{font-size:.78rem;color:var(--text2);margin-top:2px;}
+.stat-sec-title{font-size:.78rem;font-weight:bold;color:var(--wood2);
+  margin-bottom:10px;text-transform:uppercase;letter-spacing:1.5px;}
+.srow-stat{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.stat-name{width:70px;font-size:.85rem;color:var(--text);white-space:nowrap;}
+.stat-yr-lbl{width:38px;font-size:.8rem;color:var(--text2);text-align:right;flex-shrink:0;}
+.stat-track{flex:1;height:18px;background:#e8d8c0;border-radius:9px;overflow:hidden;}
+.stat-fill{height:100%;border-radius:9px;transition:width .5s ease;min-width:4px;}
+.stat-num{width:26px;font-size:.8rem;color:var(--text2);text-align:right;flex-shrink:0;}
+.sparkline{display:flex;gap:5px;align-items:flex-end;padding:4px 0 2px;overflow-x:auto;}
+.spark-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:30px;}
+.spark-num{font-size:.68rem;color:var(--text2);height:13px;line-height:13px;}
+.spark-wrap{display:flex;align-items:flex-end;height:60px;}
+.spark-bar{width:20px;border-radius:3px 3px 0 0;transition:height .3s ease;}
+.spark-lbl{font-size:.68rem;color:var(--text2);}
+.stat-empty{text-align:center;padding:20px;color:var(--text2);font-style:italic;font-size:.85rem;}
+
+/* ── SCANNER ── */
+.scan-wrap{width:100%;max-width:380px;margin:0 auto;border-radius:var(--r);
+  overflow:hidden;background:#000;min-height:200px;}
+.scan-status{text-align:center;margin-top:12px;font-size:.84rem;
+  color:var(--text2);min-height:22px;padding:0 8px;}
+.scan-tip{text-align:center;font-size:.75rem;color:var(--text2);
+  margin-top:6px;opacity:.7;}
+
+/* ══ CAMINETTO ══════════════════════════════════════════════ */
+/* ── CAMINETTO ── */
+.fireplace{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:260px;z-index:2;pointer-events:none;display:flex;flex-direction:column;align-items:center;
+  filter:drop-shadow(0 -8px 22px rgba(255,110,0,.5));}
+
+/* Canna fumaria */
+.fp-chimney{
+  width:68px;height:190px;
+  background:#7B3B1E;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 13px,rgba(0,0,0,.18) 13px,rgba(0,0,0,.18) 15px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(0,0,0,.12) 19px,rgba(0,0,0,.12) 21px);
+  border-radius:3px 3px 0 0;
+  position:relative;
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.2),inset 3px 0 6px rgba(0,0,0,.2);
+}
+/* cappello canna */
+.fp-chimney::after{
+  content:'';position:absolute;top:-10px;left:-8px;right:-8px;height:14px;
+  background:linear-gradient(to bottom,#5c3310,#7B3B1E);
+  border-radius:3px;
+  box-shadow:0 -2px 0 #3d1f0d;
+}
+/* fumo */
+.fp-smoke{
+  position:absolute;top:-18px;border-radius:50%;
+  background:rgba(180,170,160,.55);
+  animation:smoke 3s ease-out infinite;
+  pointer-events:none;
+}
+.fp-sm1{width:14px;height:14px;left:18px;animation-delay:0s;}
+.fp-sm2{width:10px;height:10px;left:36px;animation-delay:1s;}
+.fp-sm3{width:12px;height:12px;left:26px;animation-delay:2s;}
+@keyframes smoke{
+  0%  {transform:translateY(0) scale(1);   opacity:.6;}
+  60% {transform:translateY(-50px) scale(2.4);opacity:.25;}
+  100%{transform:translateY(-90px) scale(3.5);opacity:0;}
+}
+
+/* Mensola */
+.fp-shelf{width:292px;height:20px;
+  background:linear-gradient(to bottom,#9a6635,#5c3310);
+  border-radius:5px 5px 0 0;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.18),0 3px 10px rgba(0,0,0,.45),
+             4px 0 0 #3d1f0d,-4px 0 0 #3d1f0d;}
+/* Struttura in mattoni */
+.fp-body{width:260px;height:160px;background:#7B3B1E;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 13px,rgba(0,0,0,.18) 13px,rgba(0,0,0,.18) 15px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(0,0,0,.12) 19px,rgba(0,0,0,.12) 21px);
+  border-radius:3px 3px 0 0;display:flex;justify-content:center;align-items:flex-end;}
+/* Apertura ad arco */
+.fp-arch{width:165px;height:125px;background:#0d0400;
+  border-radius:52% 52% 0 0/48% 48% 0 0;overflow:hidden;position:relative;}
+
+/* Tronchi */
+.fp-log{position:absolute;height:13px;border-radius:6px;border:1px solid #1e0800;
+  background:linear-gradient(to bottom,#6B3010,#3d1805);}
+.fp-log-a{width:115px;left:25px;bottom:8px;transform:rotate(-7deg);}
+.fp-log-b{width:108px;left:28px;bottom:2px;transform:rotate(7deg);}
+
+/* Fiamme (ridisegnate per apertura più grande) */
+.fp-fl{position:absolute;border-radius:50% 50% 20% 20%/60% 60% 20% 20%;transform-origin:bottom center;}
+.fp-fl-1{left:12px; bottom:16px;width:30px;height:52px;background:linear-gradient(to top,#aa1a00,#ff4400);animation:fl1 .68s ease-in-out infinite alternate;}
+.fp-fl-2{left:34px; bottom:16px;width:38px;height:72px;background:linear-gradient(to top,#bb3300,#ff7700);animation:fl2 .84s ease-in-out infinite alternate;}
+.fp-fl-3{left:68px; bottom:16px;width:32px;height:60px;background:linear-gradient(to top,#aa2200,#ff5500);animation:fl3 .75s ease-in-out infinite alternate;}
+.fp-fl-4{left:98px; bottom:16px;width:28px;height:50px;background:linear-gradient(to top,#cc3300,#ff6600);animation:fl1 .60s ease-in-out infinite alternate;}
+.fp-fl-5{left:124px;bottom:16px;width:24px;height:44px;background:linear-gradient(to top,#bb2200,#ff4400);animation:fl2 .70s ease-in-out infinite alternate;}
+.fp-fl-6{left:40px; bottom:22px;width:26px;height:48px;background:linear-gradient(to top,#ff8800,#ffcc00);animation:fl2 .56s ease-in-out infinite alternate;z-index:1;}
+.fp-fl-7{left:70px; bottom:22px;width:22px;height:42px;background:linear-gradient(to top,#ffaa00,#ffe066);animation:fl3 .50s ease-in-out infinite alternate;z-index:1;}
+.fp-fl-8{left:95px; bottom:22px;width:20px;height:38px;background:linear-gradient(to top,#ff9900,#ffdd44);animation:fl1 .58s ease-in-out infinite alternate;z-index:1;}
+.fp-fl-9{left:55px; bottom:28px;width:16px;height:32px;background:linear-gradient(to top,#ffee44,#fffff0);animation:fl1 .45s ease-in-out infinite alternate;z-index:2;}
+.fp-fl-10{left:80px;bottom:30px;width:14px;height:28px;background:linear-gradient(to top,#ffee44,#fffff0);animation:fl3 .42s ease-in-out infinite alternate;z-index:2;}
+
+/* Brace */
+.fp-emb{position:absolute;border-radius:50%;background:#ff5500;}
+.fp-e1{width:10px;height:7px;left:25px; bottom:14px;animation:emb .9s  ease-in-out infinite alternate;}
+.fp-e2{width:8px; height:5px;left:68px; bottom:12px;animation:emb 1.2s ease-in-out infinite alternate;animation-delay:.3s;}
+.fp-e3{width:7px; height:5px;left:108px;bottom:15px;animation:emb 1.0s ease-in-out infinite alternate;animation-delay:.6s;}
+.fp-e4{width:6px; height:4px;left:46px; bottom:10px;animation:emb 0.8s ease-in-out infinite alternate;animation-delay:.9s;}
+
+/* Bagliore interno */
+.fp-glow-i{position:absolute;bottom:0;left:0;right:0;height:65px;
+  background:radial-gradient(ellipse at 50% 100%,rgba(255,100,0,.6),transparent 70%);
+  animation:glw 1.6s ease-in-out infinite alternate;}
+
+/* Bagliore ambientale */
+.fp-ambient{position:fixed;bottom:0;left:0;right:0;height:38vh;
+  background:radial-gradient(ellipse at 50% 100%,rgba(255,95,0,.07),transparent 62%);
+  pointer-events:none;z-index:0;animation:glw 2.2s ease-in-out infinite alternate;}
+
+/* Animazioni fiamme/brace/bagliore */
+@keyframes fl1{0%{transform:scaleX(1)    scaleY(1)    rotate(-3deg);opacity:.95}100%{transform:scaleX(.91)  scaleY(1.09) rotate(4deg); opacity:1}}
+@keyframes fl2{0%{transform:scaleX(1.06) scaleY(.92)  rotate(2deg) }100%{transform:scaleX(.94)  scaleY(1.07) rotate(-4deg);opacity:.88}}
+@keyframes fl3{0%{transform:scaleX(.96)  scaleY(1.05) rotate(-2deg);opacity:.9}100%{transform:scaleX(1.04) scaleY(.95)  rotate(3deg)}}
+@keyframes emb{0%{opacity:.55;transform:scale(1)}  100%{opacity:1;  transform:scale(1.4)}}
+@keyframes glw{0%{opacity:.65}                      100%{opacity:1}}
+
+/* ── FINESTRA CON ABETI ── */
+/* nascosta su mobile landscape (schermo basso) */
+@media screen and (orientation:landscape) and (max-height:520px){ .window{display:none;} }
+
+.window{
+  position:fixed;
+  left:50%;transform:translateX(-50%);  /* centrata sopra il caminetto */
+  bottom:440px;
+  z-index:1;pointer-events:none;width:320px;
+}
+.win-inner{
+  width:320px;height:300px;             /* alta e stretta, come una finestra a muro */
+  border:11px solid var(--wood2);border-radius:3px;
+  overflow:hidden;position:relative;
+  box-shadow:inset 0 0 0 2px var(--wood3),5px 5px 18px rgba(0,0,0,.6),-1px -1px 0 var(--wood);
+  transition:background 20s ease;       /* transizione lenta tra gli stati */
+}
+.win-sky{
+  width:100%;height:100%;position:relative;overflow:hidden;
+  transition:background 20s ease;
+}
+/* neve (visibile di notte/alba) */
+.win-sky::before{
+  content:'';position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0.75;
+  background:
+    radial-gradient(circle,rgba(255,255,255,.95) 1px,transparent 1px) 14% 0 / 22px 28px,
+    radial-gradient(circle,rgba(255,255,255,.85) 1px,transparent 1px) 44% 8% / 18px 32px,
+    radial-gradient(circle,rgba(255,255,255,.90) 1px,transparent 1px) 71% 3% / 26px 25px,
+    radial-gradient(circle,rgba(255,255,255,.80) 1px,transparent 1px) 87% 0% / 20px 30px,
+    radial-gradient(circle,rgba(255,255,255,.75) 1px,transparent 1px) 31% 12% / 23px 27px;
+  animation:snowfall 5s linear infinite;
+}
+@keyframes snowfall{
+  0%  {background-position:14% -28px,44% -22px,71% -25px,87% -30px,31% -15px;}
+  100%{background-position:14% 110%,  44% 118%,  71% 115%,  87% 112%,  31% 125%;}
+}
+/* sole */
+#win-sun{
+  position:absolute;width:22px;height:22px;border-radius:50%;
+  background:radial-gradient(circle,#ffe878 30%,#ffb020 100%);
+  box-shadow:0 0 14px 5px rgba(255,200,40,.65);
+  z-index:4;transition:top 20s ease,left 20s ease,opacity 20s;
+}
+/* luna */
+#win-moon{
+  position:absolute;width:17px;height:17px;border-radius:50%;
+  background:#fffbe0;
+  box-shadow:0 0 10px 3px rgba(255,250,200,.55);
+  z-index:4;transition:opacity 20s;
+}
+/* stelle — disabilitate */
+#win-stars{display:none;}
+/* traverse finestra */
+.win-h{position:absolute;top:50%;left:0;right:0;height:7px;background:var(--wood2);transform:translateY(-50%);z-index:10;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);}
+.win-v{position:absolute;left:50%;top:0;bottom:0;width:7px;background:var(--wood2);transform:translateX(-50%);z-index:10;box-shadow:inset 1px 0 0 rgba(255,255,255,.2);}
+.win-glare{position:absolute;top:5%;left:6%;width:32%;height:38%;background:rgba(255,255,255,.07);border-radius:2px;z-index:11;}
+/* ── TENDINE ── */
+.win-curtain-l,.win-curtain-r{
+  position:absolute;
+  top:-20px;
+  width:38px;
+  height:370px;
+  /* pieghe verticali rosse */
+  background:repeating-linear-gradient(to right,
+    #c41424 0px,#8e0e1a 6px,#c41424 12px,#d81a2c 18px,#c41424 24px);
+  border-radius:4px;
+  box-shadow:0 4px 12px rgba(0,0,0,.45);
+  z-index:12;
+}
+/* anellini sul bastone */
+.win-curtain-l::before,.win-curtain-r::before{
+  content:'';position:absolute;top:0;left:10%;width:80%;height:7px;
+  background:var(--wood3);border-radius:0 0 3px 3px;
+}
+/* fermacurtain */
+.win-curtain-l::after,.win-curtain-r::after{
+  content:'';position:absolute;top:43%;
+  width:13px;height:13px;border-radius:50%;
+  background:radial-gradient(circle,#d4a060 30%,#7a4a1a 100%);
+  box-shadow:0 1px 4px rgba(0,0,0,.45);
+}
+.win-curtain-l{
+  right:calc(100% - 11px);   /* appoggiata al bordo sinistro */
+  border-radius:0 4px 4px 0;
+}
+.win-curtain-l::after{ right:-5px; }
+.win-curtain-r{
+  left:calc(100% - 11px);    /* appoggiata al bordo destro */
+  border-radius:4px 0 0 4px;
+}
+.win-curtain-r::after{ left:-5px; }
+/* davanzale */
+.win-sill{height:15px;background:linear-gradient(to bottom,var(--wood3),var(--wood2));border-radius:0 0 4px 4px;box-shadow:0 4px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.15);margin:0 -4px;}
+/* alberi */
+.fir{position:absolute;display:flex;flex-direction:column;align-items:center;transform-origin:bottom center;}
+.fl{width:0;height:0;border-style:solid;border-color:transparent transparent currentColor transparent;margin:0 auto;}
+.ft{background:currentColor;margin:0 auto;border-radius:1px;}
+/* abeti di sfondo (più piccoli, più chiari) */
+.fir-bg{color:#3a6b32;}
+.fir-bg .fl:nth-child(1){border-width:0 8px 13px; margin-bottom:-5px;}
+.fir-bg .fl:nth-child(2){border-width:0 12px 19px;margin-bottom:-7px;}
+.fir-bg .fl:nth-child(3){border-width:0 17px 27px;}
+.fir-bg .ft{width:4px;height:7px;}
+/* abeti in primo piano (più grandi, più scuri) */
+.fir-fg{color:#1c3d18;}
+.fir-fg .fl:nth-child(1){border-width:0 13px 21px;margin-bottom:-8px;}
+.fir-fg .fl:nth-child(2){border-width:0 20px 32px;margin-bottom:-12px;}
+.fir-fg .fl:nth-child(3){border-width:0 28px 44px;}
+.fir-fg .ft{width:7px;height:11px;}
+/* animazioni vento */
+@keyframes sway1{0%,100%{transform:rotate(-2.5deg);}50%{transform:rotate(2deg);}}
+@keyframes sway2{0%,100%{transform:rotate(1.5deg);} 50%{transform:rotate(-3deg);}}
+
+/* ══ TAPPETO ════════════════════════════════════════════════ */
+.rug{
+  position:fixed;bottom:0;left:-5%;right:-5%;width:110%;
+  height:100px;
+  pointer-events:none;z-index:1;
+  /* prospettiva pavimento: il bordo in alto appare più lontano */
+  transform-origin:bottom center;
+  transform:perspective(420px) rotateX(28deg);
+  background-color:#8B1A1A;
+  background-image:
+    /* bordo oro esterno */
+    linear-gradient(to right,#C8992A 0,#C8992A 10px,transparent 10px),
+    linear-gradient(to left, #C8992A 0,#C8992A 10px,transparent 10px),
+    linear-gradient(to bottom,#C8992A 0,#C8992A 6px,transparent 6px),
+    linear-gradient(to top,  #C8992A 0,#C8992A 7px,transparent 7px),
+    /* bordo rosso scuro interno */
+    linear-gradient(to right,transparent 14px,#5a0e0e 14px,#5a0e0e 17px,transparent 17px),
+    linear-gradient(to left, transparent 14px,#5a0e0e 14px,#5a0e0e 17px,transparent 17px),
+    /* motivo geometrico orientale: losanghe dorate */
+    repeating-linear-gradient(90deg,
+      transparent 0,transparent 24px,
+      rgba(200,153,42,.32) 24px,rgba(200,153,42,.32) 26px,
+      transparent 26px,transparent 50px,
+      rgba(200,153,42,.16) 50px,rgba(200,153,42,.16) 51px),
+    repeating-linear-gradient(0deg,
+      transparent 0,transparent 18px,
+      rgba(180,30,30,.18) 18px,rgba(180,30,30,.18) 20px),
+    /* filigrana a 45° */
+    repeating-linear-gradient(45deg,
+      transparent 0,transparent 10px,
+      rgba(255,255,255,.05) 10px,rgba(255,255,255,.05) 11px),
+    repeating-linear-gradient(-45deg,
+      transparent 0,transparent 10px,
+      rgba(255,255,255,.04) 10px,rgba(255,255,255,.04) 11px);
+  /* ombra verso il basso per "incollarlo" al pavimento */
+  box-shadow:
+    0 8px 24px rgba(0,0,0,.5),
+    0 2px 0 rgba(0,0,0,.3),
+    inset 0 4px 0 rgba(200,153,42,.4),
+    inset 0 -2px 0 rgba(0,0,0,.25);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 Biblioteca di Casa</h1>
+  <div class="hright">
+    <span id="conn">⏳ connessione…</span>
+    <button class="btn btn-secondary" id="stats-btn" onclick="openStats()" style="background:rgba(255,255,255,.12);border-color:rgba(255,220,150,.4);color:#f5deb3;">📊 Statistiche</button>
+    <button class="btn btn-music" id="mbtn" onclick="toggleMusic()">🎵 Musica</button>
+    <a href="/logout" style="font-size:.72rem;color:#c4956a;text-decoration:none;padding:4px 10px;border:1px solid rgba(200,150,80,.35);border-radius:12px;white-space:nowrap;" title="Esci">Esci</a>
+  </div>
+</header>
+
+<main><div id="lib"></div></main>
+
+<!-- PLAYER MUSICA -->
+<div id="mpanel">
+  <div class="mph" onclick="toggleMusic()">
+    <span>🎵 Musica di sottofondo</span>
+    <button title="Chiudi">▾</button>
+  </div>
+  <iframe id="yt" src="about:blank"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen></iframe>
+</div>
+
+<!-- MODALE RIPIANO -->
+<div class="ov" id="ov-shelf">
+  <div class="modal">
+    <div class="mh">
+      <h2 class="mt" id="shelf-t">Ripiano</h2>
+      <button class="mx" onclick="close1('ov-shelf')">✕</button>
+    </div>
+    <div id="shelf-list" class="blist"></div>
+    <button class="btn btn-primary btn-full" onclick="openAdd(null)">＋ Aggiungi libro qui</button>
+  </div>
+</div>
+
+<!-- MODALE LIBRO -->
+<div class="ov" id="ov-book">
+  <div class="modal wide">
+    <div class="mh">
+      <h2 class="mt" id="book-t">Libro</h2>
+      <button class="mx" onclick="close1('ov-book')">✕</button>
+    </div>
+    <div id="book-body"></div>
+  </div>
+</div>
+
+<!-- MODALE RECENSIONE -->
+<div class="ov" id="ov-rev">
+  <div class="modal">
+    <div class="mh">
+      <h2 class="mt" id="rev-t">Recensione</h2>
+      <button class="mx" onclick="close1('ov-rev')">✕</button>
+    </div>
+    <div id="rev-body"></div>
+  </div>
+</div>
+
+<!-- MODALE AGGIUNGI/MODIFICA -->
+<div class="ov" id="ov-add">
+  <div class="modal">
+    <div class="mh">
+      <h2 class="mt" id="add-t">Aggiungi libro</h2>
+      <button class="mx" onclick="close1('ov-add')">✕</button>
+    </div>
+    <div id="add-body"></div>
+  </div>
+</div>
+
+<!-- MODALE STATISTICHE -->
+<div class="ov" id="ov-stats">
+  <div class="modal wide">
+    <div class="mh">
+      <h2 class="mt">📊 Statistiche della Biblioteca</h2>
+      <button class="mx" onclick="close1('ov-stats')">✕</button>
+    </div>
+    <div id="stats-body"></div>
+  </div>
+</div>
+
+<!-- MODALE SCANNER ISBN -->
+<div class="ov" id="ov-scan" onclick="if(event.target===this)stopScan()">
+  <div class="modal">
+    <div class="mh">
+      <h2 class="mt">📷 Scansiona ISBN</h2>
+      <button class="mx" onclick="stopScan()">✕</button>
+    </div>
+    <!-- Live camera (funziona su localhost o HTTPS) -->
+    <div id="scan-live-wrap">
+      <div id="scan-region" style="width:100%;border-radius:var(--r);overflow:hidden;
+        min-height:180px;background:#111;"></div>
+    </div>
+    <!-- Fallback: scatta foto o carica immagine (funziona sempre) -->
+    <div id="scan-file-wrap" style="display:none;text-align:center;padding:20px 10px 10px;">
+      <div style="font-size:3.5rem;margin-bottom:10px">📷</div>
+      <p style="font-size:.88rem;color:var(--text2);margin-bottom:16px;line-height:1.5">
+        Scatta una foto al codice a barre<br>o seleziona un'immagine dalla galleria
+      </p>
+      <label class="btn btn-primary" style="cursor:pointer;display:inline-block">
+        Apri fotocamera / Galleria
+        <input type="file" id="scan-file-in" accept="image/*" capture="environment"
+          style="display:none" onchange="scanFromFile(this)">
+      </label>
+    </div>
+    <div class="scan-status" id="scan-status"></div>
+    <div class="scan-tip" id="scan-tip">Avvio fotocamera…</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── PORTRAIT LOCK (mobile) ─────────────────────────────── -->
+<div id="rotate-msg">
+  <div class="r-icon">📱</div>
+  <h2>Ruota il telefono</h2>
+  <p>La biblioteca è pensata per la visualizzazione<br>orizzontale ↔</p>
+</div>
+
+<!-- ══ DECORAZIONE AMBIENTE ══════════════════════════════════ -->
+<div class="fp-ambient"></div>
+<div class="rug"></div>
+<!-- Finestra con abeti -->
+<div class="window">
+  <div class="win-curtain-l"></div>
+  <div class="win-curtain-r"></div>
+  <div class="win-inner">
+    <div class="win-sky" id="win-sky">
+      <!-- Corpi celesti -->
+      <div id="win-sun"   style="display:none;left:50%;top:30%"></div>
+      <div id="win-moon"  style="display:none;left:65%;top:22%"></div>
+      <div id="win-stars" style="opacity:0"></div>
+      <!-- Abeti di sfondo -->
+      <div class="fir fir-bg" style="left:5%;bottom:0;animation:sway1 4.2s ease-in-out infinite;animation-delay:-1s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-bg" style="left:30%;bottom:0;animation:sway2 3.8s ease-in-out infinite">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-bg" style="left:56%;bottom:0;animation:sway1 4.6s ease-in-out infinite;animation-delay:-2s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-bg" style="left:80%;bottom:0;animation:sway2 3.5s ease-in-out infinite;animation-delay:-0.8s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <!-- Abeti in primo piano -->
+      <div class="fir fir-fg" style="left:-4%;bottom:0;animation:sway1 3.2s ease-in-out infinite">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-fg" style="left:22%;bottom:0;animation:sway2 4s ease-in-out infinite;animation-delay:-1.4s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-fg" style="left:50%;bottom:0;animation:sway1 3.6s ease-in-out infinite;animation-delay:-0.6s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+      <div class="fir fir-fg" style="left:76%;bottom:0;animation:sway2 4.3s ease-in-out infinite;animation-delay:-2.2s">
+        <div class="fl"></div><div class="fl"></div><div class="fl"></div><div class="ft"></div>
+      </div>
+    </div>
+    <div class="win-h"></div>
+    <div class="win-v"></div>
+    <div class="win-glare"></div>
+  </div>
+  <div class="win-sill"></div>
+</div>
+
+<!-- Caminetto -->
+<div class="fireplace">
+  <div class="fp-chimney">
+    <div class="fp-smoke fp-sm1"></div>
+    <div class="fp-smoke fp-sm2"></div>
+    <div class="fp-smoke fp-sm3"></div>
+  </div>
+  <div class="fp-shelf"></div>
+  <div class="fp-body">
+    <div class="fp-arch">
+      <div class="fp-glow-i"></div>
+      <div class="fp-log fp-log-a"></div>
+      <div class="fp-log fp-log-b"></div>
+      <div class="fp-fl fp-fl-1"></div>
+      <div class="fp-fl fp-fl-2"></div>
+      <div class="fp-fl fp-fl-3"></div>
+      <div class="fp-fl fp-fl-4"></div>
+      <div class="fp-fl fp-fl-5"></div>
+      <div class="fp-fl fp-fl-6"></div>
+      <div class="fp-fl fp-fl-7"></div>
+      <div class="fp-fl fp-fl-8"></div>
+      <div class="fp-fl fp-fl-9"></div>
+      <div class="fp-fl fp-fl-10"></div>
+      <div class="fp-emb fp-e1"></div>
+      <div class="fp-emb fp-e2"></div>
+      <div class="fp-emb fp-e3"></div>
+      <div class="fp-emb fp-e4"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── COSTANTI ──────────────────────────────────────────────────────────────────
+const MEMBERS = ['Dario','Chiara','Sara','Antonella','Carlo'];
+const MC = ['#e74c3c','#3498db','#9b59b6','#e67e22','#27ae60'];
+const SC = [
+  '#C0392B','#E74C3C','#E67E22','#F39C12','#F1C40F',
+  '#27AE60','#2ECC71','#1ABC9C','#16A085','#2980B9',
+  '#8E44AD','#9B59B6','#E91E63','#FF5722','#795548',
+  '#D35400','#7D3C98','#148F77','#1F618D','#B7950B',
+  '#6C3483','#117A65','#784212','#1A5276','#922B21',
+];
+const BCASES = [
+  { id:'piccola', name:'Libreria Piccola', rows:8, cols:2,
+    drawers:[{r:5,c:1},{r:8,c:1}] },
+  { id:'grande', name:'Libreria Grande', rows:8, cols:5,
+    drawers:[{r:7,c:1},{r:7,c:2},{r:7,c:3},{r:7,c:4},
+             {r:8,c:2},{r:8,c:3},{r:8,c:4},{r:8,c:5},
+             {r:5,c:2},{r:5,c:4}] }
+];
+
+// ── STATO ────────────────────────────────────────────────────────────────────
+let BOOKS     = [];
+let curShelf  = null;
+let curBookId = null;
+let editId    = null;
+let isbnData  = {};
+let revState  = {};
+
+// ── SSE (aggiornamenti in tempo reale) ───────────────────────────────────────
+const sse = new EventSource('/api/eventi');
+sse.onmessage = e => {
+  BOOKS = JSON.parse(e.data);
+  renderAll();
+  setConn(true);
+};
+sse.onerror = () => setConn(false);
+
+function setConn(ok) {
+  const el = document.getElementById('conn');
+  if (ok) { el.textContent = '🟢 Online'; el.className = 'ok'; }
+  else     { el.textContent = '🔴 Server non raggiungibile'; el.className = 'err'; }
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function apiPost(libro) {
+  await fetch('/api/libri', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(libro)
+  });
+}
+async function apiPut(id, dati) {
+  await fetch(`/api/libri/${id}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(dati)
+  });
+}
+async function apiDel(id) {
+  await fetch(`/api/libri/${id}`, { method:'DELETE' });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function djb2(s){ let v=5381; for(let i=0;i<s.length;i++) v=((v<<5)+v)^s.charCodeAt(i); return v>>>0; }
+function colFor(t,id){ const s=djb2((t||'')+(id||'')); return SC[s%SC.length]; }
+function hFor(id) { return 26+djb2(id||'x')%24; }
+
+let _tt;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),2800); }
+
+// ── MODALI ────────────────────────────────────────────────────────────────────
+let Z = 100;
+function open1(id){ const el=document.getElementById(id); el.style.zIndex=++Z; el.classList.add('show'); document.body.style.overflow='hidden'; }
+function close1(id){ document.getElementById(id).classList.remove('show'); if(!document.querySelector('.ov.show')){document.body.style.overflow='';Z=100;} else Z=Math.max(100,Z-1); }
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  const all=[...document.querySelectorAll('.ov.show')];
+  if(!all.length)return;
+  const top=all.reduce((a,b)=>(+a.style.zIndex||0)>(+b.style.zIndex||0)?a:b);
+  if(top.id==='ov-scan'){stopScan();return;}
+  close1(top.id);
+});
+
+// ── RENDER LIBRERIE ───────────────────────────────────────────────────────────
+function renderAll(){ renderBookcases(); }
+
+function renderBookcases(){
+  const wrap=document.getElementById('lib');
+  wrap.innerHTML='';
+  BCASES.forEach(bc=>{
+    const div=document.createElement('div'); div.className='bcwrap';
+    div.innerHTML=`<div class="bclbl">${bc.name}</div>`;
+    const bcEl=document.createElement('div'); bcEl.className='bc';
+    bcEl.innerHTML='<div class="bbd t"></div>';
+    for(let r=1;r<=bc.rows;r++){
+      const row=document.createElement('div'); row.className='srow';
+      for(let c=1;c<=bc.cols;c++){
+        const isDrw=bc.drawers.some(d=>d.r===r&&d.c===c);
+        const cell=document.createElement('div');
+        if(isDrw){
+          cell.className='sc drw';
+          cell.innerHTML='<div class="drw-h"></div><div class="drw-l">cassetto</div>';
+        } else {
+          cell.className='sc';
+          const bks=BOOKS.filter(b=>b.bcId===bc.id&&b.row===r&&b.col===c);
+          const prev=document.createElement('div'); prev.className='bprev';
+          bks.slice(0,6).forEach(bk=>{
+            const sp=document.createElement('div'); sp.className='spine';
+            sp.style.cssText=`width:10px;height:${hFor(bk.id)}px;background:${bk.color||colFor(bk.title)};`;
+            prev.appendChild(sp);
+          });
+          if(bks.length){
+            const n=document.createElement('div'); n.className='sc-n'; n.textContent=bks.length;
+            cell.appendChild(n);
+          } else {
+            const h=document.createElement('div'); h.className='sc-h'; h.textContent='+';
+            cell.appendChild(h);
+          }
+          cell.appendChild(prev);
+          cell.title=`${bc.name} — Rip.${r} Col.${c}${bks.length?' ('+bks.length+')':''}`;
+          cell.addEventListener('click',()=>openShelf(bc,r,c));
+        }
+        row.appendChild(cell);
+      }
+      bcEl.appendChild(row);
+    }
+    const bb=document.createElement('div'); bb.className='bbd b'; bcEl.appendChild(bb);
+    div.appendChild(bcEl);
+    wrap.appendChild(div);
+  });
+}
+
+// ── MODALE RIPIANO ────────────────────────────────────────────────────────────
+function openShelf(bc,row,col){
+  curShelf={bc,row,col};
+  document.getElementById('shelf-t').textContent=`${bc.name} — Rip. ${row}, Col. ${col}`;
+  renderShelfList();
+  open1('ov-shelf');
+}
+function renderShelfList(){
+  if(!curShelf)return;
+  const {bc,row,col}=curShelf;
+  const bks=BOOKS.filter(b=>b.bcId===bc.id&&b.row===row&&b.col===col);
+  const wrap=document.getElementById('shelf-list');
+  wrap.innerHTML='';
+  if(!bks.length){ wrap.innerHTML='<div class="empty">Nessun libro qui — aggiungine uno!</div>'; return; }
+  bks.forEach(bk=>{
+    const r=document.createElement('div'); r.className='brow';
+    r.addEventListener('click',()=>openBook(bk.id));
+    const dots=MEMBERS.map((m,i)=>`<div class="rdot${bk.reviews?.[m]?.read?' yes':''}" title="${m}"></div>`).join('');
+    const cov=bk.cover
+      ?`<img class="bthumb" src="${esc(bk.cover)}" alt="" onerror="this.style.display='none'">`
+      :`<div class="bph" style="background:${bk.color||colFor(bk.title)}">📖</div>`;
+    r.innerHTML=`${cov}<div class="binfo"><div class="btit">${esc(bk.title)}</div><div class="baut">${esc(bk.author||'—')}</div><div class="rdots">${dots}</div></div><div style="color:#ccc;font-size:1.1rem">›</div>`;
+    wrap.appendChild(r);
+  });
+}
+
+// ── DETTAGLIO LIBRO ───────────────────────────────────────────────────────────
+function openBook(id){
+  curBookId=id;
+  const bk=BOOKS.find(b=>b.id===id); if(!bk)return;
+  document.getElementById('book-t').textContent=bk.title;
+  renderBookBody(bk);
+  open1('ov-book');
+}
+function renderBookBody(bk){
+  const bcObj=BCASES.find(b=>b.id===bk.bcId);
+  const loc=bcObj?`${bcObj.name}, Rip.${bk.row} Col.${bk.col}`:'';
+  const cov=bk.cover
+    ?`<img class="bcov" src="${esc(bk.cover)}" alt="" onerror="this.style.display='none'">`
+    :`<div class="bcov-ph" style="background:${bk.color||colFor(bk.title)}">📖</div>`;
+  const cards=MEMBERS.map((m,i)=>{
+    const rev=bk.reviews?.[m]||{};
+    const stars=[1,2,3,4,5].map(s=>`<span class="mstar${rev.rating>=s?' on':''}">★</span>`).join('');
+    const has=rev.read||rev.rating||rev.text;
+    return `
+      <div class="mcard${has?' has':''}" onclick="openReview('${bk.id}','${m}')">
+        <div class="mcard-name">
+          <div class="avat" style="background:${MC[i]}">${m[0]}</div>
+          <span>${esc(m)}</span>
+        </div>
+        <div class="mstatus${rev.read?' yes':''}">${rev.read?'✓ Letto':'· Non ancora letto'}${rev.read&&rev.readYear?` <span style="font-weight:normal;opacity:.8">· ${MESI_SHORT[rev.readMonth?rev.readMonth-1:null]??''}${rev.readMonth?' ':''}${rev.readYear}</span>`:''}</div>
+        ${rev.rating?`<div class="mstars">${stars}</div>`:''}
+        ${rev.text?`<div class="rsnip">"${esc(rev.text)}"</div>`:''}
+        ${!has?'<div class="mhint">Clicca per aggiungere una recensione</div>':''}
+      </div>`;
+  }).join('');
+  document.getElementById('book-body').innerHTML=`
+    <div class="bd-top">
+      ${cov}
+      <div class="bmeta">
+        <h2>${esc(bk.title)}</h2>
+        <div class="bauth">${esc(bk.author||'Autore sconosciuto')}</div>
+        ${bk.isbn?`<div class="isbn-tag">ISBN: ${esc(bk.isbn)}</div>`:''}
+        ${bk.year?`<div style="font-size:.78rem;color:var(--text2);margin-bottom:5px">📅 ${esc(bk.year)}</div>`:''}
+        <div style="font-size:.73rem;color:var(--text2)">📍 ${esc(loc)}</div>
+        ${bk.description?`<div class="bdesc">${esc(bk.description.slice(0,200))}${bk.description.length>200?'…':''}</div>`:''}
+      </div>
+    </div>
+    <hr class="hr">
+    <div class="rev-sec">
+      <h3>Recensioni dei membri</h3>
+      <div class="rev-grid">${cards}</div>
+    </div>
+    <div class="ma">
+      <button class="btn btn-secondary btn-sm" onclick="editBook('${bk.id}')">✏️ Modifica</button>
+      <button class="btn btn-danger btn-sm"    onclick="delBook('${bk.id}')">🗑 Elimina</button>
+    </div>`;
+}
+function editBook(id){ close1('ov-book'); openAdd(id); }
+async function delBook(id){
+  if(!confirm('Eliminare questo libro?'))return;
+  await apiDel(id);
+  close1('ov-book');
+  toast('Libro eliminato');
+}
+
+// ── RECENSIONE ────────────────────────────────────────────────────────────────
+function openReview(bookId,member){
+  const bk=BOOKS.find(b=>b.id===bookId); if(!bk)return;
+  const rev=bk.reviews?.[member]||{};
+  revState={bookId,member,rating:rev.rating||0};
+  document.getElementById('rev-t').textContent=`${member} — ${bk.title}`;
+  const stars=[1,2,3,4,5].map(s=>
+    `<button class="sb" onclick="setR(${s})" onmouseenter="hvR(${s})" onmouseleave="rstR()">${rev.rating>=s?'★':'☆'}</button>`
+  ).join('');
+  const curY=new Date().getFullYear();
+  const yearOpts=Array.from({length:curY-1979},(_,i)=>curY-i)
+    .map(y=>`<option value="${y}"${rev.readYear==y?' selected':''}>${y}</option>`).join('');
+  const monthNames=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                    'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const monthOpts=monthNames.map((n,i)=>
+    `<option value="${i+1}"${rev.readMonth==i+1?' selected':''}>${n}</option>`).join('');
+
+  document.getElementById('rev-body').innerHTML=`
+    <div class="fg"><div class="cbrow">
+      <input type="checkbox" id="rv-rd" ${rev.read?'checked':''}
+        onchange="document.getElementById('rv-period').style.display=this.checked?'block':'none'">
+      <label for="rv-rd" style="cursor:pointer">Ho letto questo libro</label>
+    </div></div>
+    <div id="rv-period" style="display:${rev.read?'block':'none'}">
+      <div class="fg">
+        <label class="fl">Quando l'hai letto? <span style="font-weight:normal;font-style:italic;font-size:.75rem">(opzionale)</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="fi" id="rv-year" style="max-width:140px">
+            <option value="">Anno — non ricordo</option>
+            ${yearOpts}
+          </select>
+          <select class="fi" id="rv-month" style="max-width:160px">
+            <option value="">Mese — non ricordo</option>
+            ${monthOpts}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Valutazione</label>
+      <div class="spick" id="spick">${stars}</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Recensione</label>
+      <textarea class="fi" id="rv-tx" placeholder="Scrivi la tua opinione…">${esc(rev.text||'')}</textarea>
+    </div>
+    <div class="ma">
+      <button class="btn btn-secondary" onclick="close1('ov-rev')">Annulla</button>
+      <button class="btn btn-primary"   onclick="saveRev()">Salva</button>
+    </div>`;
+  open1('ov-rev');
+}
+function setR(v){ revState.rating=v; rfStars(v); }
+function hvR(v) { rfStars(v); }
+function rstR() { rfStars(revState.rating); }
+function rfStars(v){ const p=document.getElementById('spick'); if(!p)return; p.querySelectorAll('.sb').forEach((b,i)=>b.textContent=i<v?'★':'☆'); }
+async function saveRev(){
+  const{bookId,member}=revState;
+  const bk=BOOKS.find(b=>b.id===bookId); if(!bk)return;
+  const reviews=Object.assign({},bk.reviews||{});
+  const rvYear  = document.getElementById('rv-year')?.value;
+  const rvMonth = document.getElementById('rv-month')?.value;
+  reviews[member]={
+    read:   document.getElementById('rv-rd').checked,
+    rating: revState.rating,
+    text:   document.getElementById('rv-tx').value.trim(),
+    date:   new Date().toISOString().slice(0,10),
+    readYear:  rvYear  ? parseInt(rvYear,10)  : null,
+    readMonth: rvMonth ? parseInt(rvMonth,10) : null
+  };
+  await apiPut(bookId,{reviews});
+  close1('ov-rev');
+  const upd=BOOKS.find(b=>b.id===bookId);
+  if(upd){ renderBookBody(upd); }
+  toast('Recensione salvata! ⭐');
+}
+
+// ── AGGIUNGI / MODIFICA LIBRO ─────────────────────────────────────────────────
+function openAdd(bookIdToEdit){
+  editId=bookIdToEdit||null;
+  isbnData={};
+  const bk=editId?BOOKS.find(b=>b.id===editId):null;
+  document.getElementById('add-t').textContent=editId?'Modifica libro':'Aggiungi libro';
+
+  let defBcId=curShelf?.bc.id||BCASES[0].id;
+  let defR   =curShelf?.row  ||1;
+  let defC   =curShelf?.col  ||1;
+  if(bk){defBcId=bk.bcId;defR=bk.row;defC=bk.col;}
+
+  const opts=BCASES.map(bc=>{
+    let o='';
+    for(let r=1;r<=bc.rows;r++)
+      for(let c=1;c<=bc.cols;c++){
+        if(bc.drawers.some(d=>d.r===r&&d.c===c))continue;
+        const s=(bc.id===defBcId&&r===defR&&c===defC)?'selected':'';
+        o+=`<option value="${bc.id}||${r}||${c}" ${s}>${bc.name} — Rip.${r} Col.${c}</option>`;
+      }
+    return `<optgroup label="${bc.name}">${o}</optgroup>`;
+  }).join('');
+
+  document.getElementById('add-body').innerHTML=`
+    <div class="fg">
+      <label class="fl">Cerca per ISBN (opzionale)</label>
+      <div class="isbn-row">
+        <input class="fi" type="text" id="ai-isbn" placeholder="es. 9788804668237"
+          value="${esc(bk?.isbn||'')}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();doISBN();}">
+        <button class="btn btn-secondary" type="button" onclick="doISBN()">🔍 Cerca</button>
+        <button class="btn btn-secondary" type="button" onclick="startScan()" title="Scansiona con fotocamera">📷</button>
+      </div>
+      <div class="isbn-st" id="ai-st"></div>
+      <div class="iprev" id="ai-pv">
+        <img id="ai-img" width="36" height="52" style="border-radius:2px;object-fit:cover;flex-shrink:0">
+        <div><div id="ai-pt" style="font-weight:bold;font-size:.85rem"></div>
+        <div id="ai-pa" style="font-size:.75rem;color:var(--text2);font-style:italic"></div></div>
+      </div>
+    </div>
+    <hr class="hr">
+    <div class="fg">
+      <label class="fl">Titolo *</label>
+      <input class="fi" type="text" id="ai-tit" placeholder="Titolo del libro" value="${esc(bk?.title||'')}">
+    </div>
+    <div class="fg">
+      <label class="fl">Autore</label>
+      <input class="fi" type="text" id="ai-aut" placeholder="Nome autore" value="${esc(bk?.author||'')}">
+    </div>
+    <div class="fg" style="max-width:130px">
+      <label class="fl">Anno</label>
+      <input class="fi" type="text" id="ai-yr" placeholder="es. 2001" value="${esc(bk?.year||'')}">
+    </div>
+    <div class="fg">
+      <label class="fl">Ripiano</label>
+      <select class="fi" id="ai-sh">${opts}</select>
+    </div>
+    <div class="ma">
+      <button class="btn btn-secondary" type="button" onclick="close1('ov-add')">Annulla</button>
+      <button class="btn btn-primary"   type="button" onclick="doSave()">${editId?'Aggiorna':'Aggiungi'}</button>
+    </div>`;
+  open1('ov-add');
+}
+
+async function doISBN(){
+  const isbn=document.getElementById('ai-isbn').value.trim().replace(/[\s\-]/g,'');
+  if(!isbn){toast('Inserisci un ISBN');return;}
+  const st=document.getElementById('ai-st'), pv=document.getElementById('ai-pv');
+  st.className='isbn-st ld'; st.textContent='🔍 Ricerca in corso…'; pv.classList.remove('show');
+  try{
+    const res=await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    const data=await res.json();
+    const b=data[`ISBN:${isbn}`];
+    if(b){
+      const title=b.title||'', author=b.authors?.[0]?.name||'';
+      const cover=b.cover?.large||b.cover?.medium||b.cover?.small||'';
+      const year=typeof b.publish_date==='string'?b.publish_date.replace(/\D/g,'').slice(0,4):'';
+      const desc=typeof b.notes==='string'?b.notes:(b.excerpts?.[0]?.text||'');
+      document.getElementById('ai-tit').value=title;
+      document.getElementById('ai-aut').value=author;
+      document.getElementById('ai-yr').value=year;
+      isbnData={cover,description:desc};
+      const img=document.getElementById('ai-img');
+      img.src=cover||''; img.style.display=cover?'':'none';
+      document.getElementById('ai-pt').textContent=title;
+      document.getElementById('ai-pa').textContent=author;
+      pv.classList.add('show');
+      st.className='isbn-st ok'; st.textContent='✓ Libro trovato!';
+    } else {
+      st.className='isbn-st err'; st.textContent='✗ ISBN non trovato — compila manualmente.';
+    }
+  } catch {
+    st.className='isbn-st err'; st.textContent='✗ Errore — compila manualmente.';
+  }
+}
+
+async function doSave(){
+  const titEl=document.getElementById('ai-tit');
+  if(!titEl){toast('Errore interno');return;}
+  const title=titEl.value.trim();
+  if(!title){toast('Il titolo è obbligatorio!');titEl.focus();return;}
+  const shEl=document.getElementById('ai-sh'); if(!shEl){toast('Errore ripiano');return;}
+  const parts=shEl.value.split('||');
+  const bcId=parts[0], row=parseInt(parts[1],10), col=parseInt(parts[2],10);
+  if(!bcId||isNaN(row)||isNaN(col)){toast('Ripiano non valido');return;}
+  const author=document.getElementById('ai-aut').value.trim();
+  const year  =document.getElementById('ai-yr').value.trim();
+  const isbn  =document.getElementById('ai-isbn').value.trim();
+
+  if(editId){
+    const upd={title,author,year,isbn,bcId,row,col};
+    if(isbnData.cover)       upd.cover      =isbnData.cover;
+    if(isbnData.description) upd.description=isbnData.description;
+    await apiPut(editId,upd);
+    close1('ov-add');
+    toast('Libro aggiornato!');
+  } else {
+    const newId=genId();                          // ← salvo prima in variabile
+    const nb={
+      id:newId,title,author,year,isbn,
+      cover:isbnData.cover||'',description:isbnData.description||'',
+      bcId,row,col,color:colFor(title,newId),    // ← uso la variabile locale
+      reviews:{},
+      addedDate:new Date().toISOString().slice(0,10)
+    };
+    await apiPost(nb);
+    close1('ov-add');
+    renderShelfList();
+    toast('Libro aggiunto! 📚');
+  }
+}
+
+// ── SCANNER ISBN ─────────────────────────────────────────────────────────────
+let scanner    = null;
+let liveStream = null;
+let scanActive = false;
+let scanLibOk  = false;
+const HAS_BD   = 'BarcodeDetector' in window;
+
+function loadScanLib(){
+  if(scanLibOk) return Promise.resolve();
+  return new Promise((ok,fail)=>{
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    s.onload=()=>{scanLibOk=true;ok();}; s.onerror=()=>fail(new Error('lib'));
+    document.head.appendChild(s);
+  });
+}
+function setScanMsg(tip,status){
+  const t=document.getElementById('scan-tip'),s=document.getElementById('scan-status');
+  if(t)t.textContent=tip||''; if(s)s.textContent=status||'';
+}
+function showFileFallback(reason){
+  document.getElementById('scan-live-wrap').style.display='none';
+  document.getElementById('scan-file-wrap').style.display='block';
+  setScanMsg('',reason||'');
+}
+
+// ── Live camera ───────────────────────────────────────────────────────────────
+async function startScan(){
+  document.getElementById('scan-region').innerHTML='';
+  document.getElementById('scan-live-wrap').style.display='block';
+  document.getElementById('scan-file-wrap').style.display='none';
+  const fi=document.getElementById('scan-file-in'); if(fi)fi.value='';
+  setScanMsg('Avvio fotocamera…','');
+  open1('ov-scan');
+  scanActive=true;
+
+  // Tentativo 1: BarcodeDetector nativo + getUserMedia ───────────────────────
+  if(HAS_BD && navigator.mediaDevices?.getUserMedia){
+    try{
+      liveStream=await navigator.mediaDevices.getUserMedia(
+        {video:{facingMode:'environment',width:{ideal:1920}}});
+      const vid=document.createElement('video');
+      vid.srcObject=liveStream; vid.playsInline=true;
+      vid.setAttribute('playsinline','true');
+      vid.style.cssText='width:100%;border-radius:var(--r);display:block';
+      document.getElementById('scan-region').appendChild(vid);
+      await vid.play();
+      setScanMsg('Inquadra il codice a barre','');
+      const fmts=await BarcodeDetector.getSupportedFormats();
+      const det=new BarcodeDetector({formats:fmts});
+      const loop=async()=>{
+        if(!scanActive)return;
+        try{
+          const codes=await det.detect(vid);
+          if(codes.length){
+            const c=codes[0].rawValue.replace(/[^0-9X]/gi,'');
+            if(c.length>=8){stopScan();document.getElementById('ai-isbn').value=c;toast('📷 ISBN scansionato!');doISBN();return;}
+          }
+        }catch{}
+        if(scanActive)requestAnimationFrame(loop);
+      };
+      vid.addEventListener('loadeddata',loop);
+      return; // ← successo, usciamo
+    }catch(bdErr){
+      if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}
+      // Se permesso negato mostra subito il fallback
+      if((bdErr.name||'').includes('NotAllowed')||(bdErr.message||'').toLowerCase().includes('permission')){
+        showFileFallback('⚠️ Permesso fotocamera negato — usa il pulsante qui sotto');
+        return;
+      }
+      // Altrimenti prova html5-qrcode
+    }
+  }
+
+  // Tentativo 2: html5-qrcode ───────────────────────────────────────────────
+  try{
+    await loadScanLib();
+    scanner=new Html5Qrcode('scan-region');
+    await scanner.start(
+      {facingMode:'environment'},{fps:12,qrbox:{width:260,height:100}},
+      (text)=>{
+        if(!scanActive)return;
+        const c=text.replace(/[^0-9X]/gi,'');
+        if(c.length>=8){stopScan();document.getElementById('ai-isbn').value=c;toast('📷 ISBN scansionato!');doISBN();}
+      },()=>{});
+    setScanMsg('Inquadra il codice a barre','');
+    return; // ← successo
+  }catch(h5Err){
+    scanner=null;
+    // Qualunque errore → mostra fallback file (mai usare variabile fuori scope)
+    showFileFallback('⚠️ Fotocamera non disponibile — scatta una foto e caricala');
+  }
+}
+
+async function stopScan(){
+  scanActive=false;
+  if(liveStream){liveStream.getTracks().forEach(t=>t.stop());liveStream=null;}
+  if(scanner){try{await scanner.stop();scanner.clear();}catch{} scanner=null;}
+  close1('ov-scan');
+}
+
+// ── Scansione da foto ─────────────────────────────────────────────────────────
+function fileToCanvas(file,maxW){
+  return new Promise((res,rej)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const scale=maxW?Math.min(1,maxW/img.width):1;
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale);
+      cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      res(cv);
+    };
+    img.onerror=rej; img.src=url;
+  });
+}
+
+async function detectOnCanvas(canvas){
+  // Prova BarcodeDetector
+  if(HAS_BD){
+    try{
+      const fmts=await BarcodeDetector.getSupportedFormats();
+      const codes=await new BarcodeDetector({formats:fmts}).detect(canvas);
+      if(codes.length) return codes[0].rawValue;
+    }catch{}
+  }
+  // Prova html5-qrcode
+  try{
+    await loadScanLib();
+    const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));
+    return await Html5Qrcode.scanFile(new File([blob],'s.jpg',{type:'image/jpeg'}),false);
+  }catch{}
+  return null;
+}
+
+async function scanFromFile(input){
+  const file=input.files?.[0]; if(!file)return;
+  setScanMsg('','🔍 Analisi in corso…');
+  let code=null;
+  for(const maxW of [0,1600,900,500]){   // 0 = dimensione originale
+    const canvas=await fileToCanvas(file,maxW||undefined).catch(()=>null);
+    if(!canvas) continue;
+    code=await detectOnCanvas(canvas);
+    if(code) break;
+  }
+  if(code){
+    const clean=code.replace(/[^0-9X]/gi,'');
+    stopScan();
+    document.getElementById('ai-isbn').value=clean;
+    toast('📷 ISBN trovato!');
+    doISBN();
+  } else {
+    setScanMsg('','❌ Codice non trovato — prova più vicino, con buona luce, tenendo il telefono fermo');
+    input.value='';
+  }
+}
+
+// ── STATISTICHE ───────────────────────────────────────────────────────────────
+const MESI=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const MESI_SHORT=MESI; // alias usato nelle card
+
+function openStats(){
+  renderStats();
+  open1('ov-stats');
+}
+
+function renderStats(){
+  const now=new Date();
+  const curYear=now.getFullYear();
+  const curMonth=now.getMonth(); // 0-indexed
+
+  if(!BOOKS.length){
+    document.getElementById('stats-body').innerHTML=
+      '<div class="stat-empty">Nessun libro in biblioteca ancora.</div>';
+    return;
+  }
+
+  // ── Letture per membro ──
+  const mData=MEMBERS.map((m,i)=>{
+    const letti=BOOKS.filter(bk=>bk.reviews?.[m]?.read);
+    return{m,i,count:letti.length};
+  });
+  const maxM=Math.max(...mData.map(d=>d.count),1);
+
+  // Helpers: usa readYear/readMonth se disponibili, altrimenti cade su date
+  function getReadYear(rev){
+    if(rev.readYear) return String(rev.readYear);
+    if(rev.date)     return rev.date.slice(0,4);
+    return null;
+  }
+  function getReadMonth(rev){
+    if(rev.readMonth) return rev.readMonth-1; // 0-indexed
+    if(rev.date)      return parseInt(rev.date.slice(5,7),10)-1;
+    return null;
+  }
+
+  // ── Letture per anno (tutti i membri combinati) ──
+  const yearMap={};
+  BOOKS.forEach(bk=>{
+    MEMBERS.forEach(m=>{
+      const rev=bk.reviews?.[m]; if(!rev?.read)return;
+      const y=getReadYear(rev); if(!y)return;
+      yearMap[y]=(yearMap[y]||0)+1;
+    });
+  });
+  const years=Object.entries(yearMap).sort((a,b)=>b[0]-a[0]);
+  const maxY=Math.max(...years.map(([,n])=>n),1);
+
+  // ── Letture per mese (anno corrente) ──
+  const monthArr=Array(12).fill(0);
+  BOOKS.forEach(bk=>{
+    MEMBERS.forEach(m=>{
+      const rev=bk.reviews?.[m]; if(!rev?.read)return;
+      const y=getReadYear(rev); if(y!==String(curYear))return;
+      const mo=getReadMonth(rev); if(mo===null||mo<0||mo>11)return;
+      monthArr[mo]++;
+    });
+  });
+  const maxMo=Math.max(...monthArr,1);
+  const totReads=BOOKS.reduce((s,bk)=>s+MEMBERS.filter(m=>bk.reviews?.[m]?.read).length,0);
+
+  // ── Render: barre membri ──
+  const mBars=mData.map(({m,i,count})=>`
+    <div class="srow-stat">
+      <div class="avat" style="background:${MC[i]};flex-shrink:0">${m[0]}</div>
+      <div class="stat-name">${m}</div>
+      <div class="stat-track">
+        <div class="stat-fill" style="width:${count?((count/maxM)*100).toFixed(1):0}%;background:${MC[i]}"></div>
+      </div>
+      <div class="stat-num">${count}</div>
+    </div>`).join('');
+
+  // ── Render: barre anni ──
+  const yBars=years.length?years.map(([y,n])=>`
+    <div class="srow-stat">
+      <div class="stat-yr-lbl">${y}</div>
+      <div class="stat-track">
+        <div class="stat-fill" style="width:${((n/maxY)*100).toFixed(1)}%;background:var(--accent)"></div>
+      </div>
+      <div class="stat-num">${n}</div>
+    </div>`).join('')
+    :'<div class="stat-empty">Nessuna lettura con data registrata.</div>';
+
+  // ── Render: sparkline mesi ──
+  const hasMo=monthArr.some(n=>n>0);
+  const sparkBars=MESI.slice(0,curMonth+1).map((lbl,i)=>{
+    const n=monthArr[i];
+    const h=Math.max(4,Math.round((n/maxMo)*56));
+    return `
+      <div class="spark-col">
+        <div class="spark-num">${n||''}</div>
+        <div class="spark-wrap">
+          <div class="spark-bar" style="height:${h}px;background:${n?'var(--accent)':'#e0d0c0'}"></div>
+        </div>
+        <div class="spark-lbl">${lbl}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('stats-body').innerHTML=`
+    <div class="stat-hero">
+      <div class="stat-big">${BOOKS.length}</div>
+      <div class="stat-big-lbl">libri in biblioteca</div>
+      <div class="stat-big-sub">${totReads} letture registrate in totale</div>
+    </div>
+    <hr class="hr">
+    <div class="stat-sec-title">👥 Chi ha letto di più</div>
+    ${mBars}
+    ${years.length?`<hr class="hr">
+    <div class="stat-sec-title">📈 Letture per anno</div>
+    ${yBars}`:''}
+    ${hasMo?`<hr class="hr">
+    <div class="stat-sec-title">📅 ${curYear} — mese per mese</div>
+    <div class="sparkline">${sparkBars}</div>`:''}`;
+}
+
+// ── CICLO GIORNO / NOTTE ─────────────────────────────────────────────────────
+const SKIES = {
+  //           0-5          6-7          7-12         12-17        17-20        20-22
+  notte:   'linear-gradient(to bottom,#04070e 0%,#080d1e 45%,#04080a 100%)',
+  alba:    'linear-gradient(to bottom,#18203a 0%,#c04820 28%,#ee9820 52%,#7aaa60 100%)',
+  mattino: 'linear-gradient(to bottom,#4a90c0 0%,#7fc0e0 50%,#b8d4b0 75%,#7a9a60 100%)',
+  giorno:  'linear-gradient(to bottom,#2e88c8 0%,#6ab8e8 48%,#a8c8a8 76%,#689060 100%)',
+  sera:    'linear-gradient(to bottom,#080d20 0%,#b83018 26%,#e07015 50%,#7a8860 100%)',
+  crepusc: 'linear-gradient(to bottom,#07050e 0%,#30124a 42%,#141828 78%,#06080a 100%)',
+};
+// posizione sole: left% top%
+const SUN = {
+  alba:    ['22%','75%'], mattino:['25%','48%'],
+  giorno:  ['50%','16%'], sera:   ['78%','60%'],
+};
+// posizione luna
+const MOON = { notte:['66%','22%'], crepusc:['72%','38%'] };
+
+function getSkyPeriod(){
+  const h = new Date().getHours();
+  if(h>=22||h<5)  return 'notte';
+  if(h< 7)        return 'alba';
+  if(h<12)        return 'mattino';
+  if(h<17)        return 'giorno';
+  if(h<20)        return 'sera';
+  return 'crepusc';
+}
+
+function updateWindowTime(){
+  const sky   = document.getElementById('win-sky');
+  const sun   = document.getElementById('win-sun');
+  const moon  = document.getElementById('win-moon');
+  const stars = document.getElementById('win-stars');
+  if(!sky) return;
+
+  const p = getSkyPeriod();
+  sky.style.background = SKIES[p];
+
+  // Sole
+  const hasSun = p in SUN;
+  if(sun){
+    sun.style.display  = hasSun ? 'block' : 'none';
+    if(hasSun){ sun.style.left = SUN[p][0]; sun.style.top = SUN[p][1]; }
+  }
+  // Luna
+  const hasMoon = p in MOON;
+  if(moon){
+    moon.style.display = hasMoon ? 'block' : 'none';
+    if(hasMoon){ moon.style.left = MOON[p][0]; moon.style.top = MOON[p][1]; }
+  }
+  // Stelle + neve
+  const hasStars = (p==='notte'||p==='crepusc'||p==='alba');
+  if(stars) stars.style.opacity = hasStars ? '1' : '0';
+  // neve solo di notte/alba
+  const snowOp = (p==='notte'||p==='alba') ? '0.7' : '0';
+  sky.style.setProperty('--snow-op', snowOp);
+}
+
+updateWindowTime();
+setInterval(updateWindowTime, 60_000); // aggiorna ogni minuto
+
+// ── MUSICA ────────────────────────────────────────────────────────────────────
+let musicOn=false;
+function toggleMusic(){
+  const panel=document.getElementById('mpanel'), frame=document.getElementById('yt'), btn=document.getElementById('mbtn');
+  musicOn=!musicOn;
+  if(musicOn){
+    frame.src='https://www.youtube-nocookie.com/embed/im6tbN9SZXs?autoplay=1&loop=1&playlist=im6tbN9SZXs&rel=0&modestbranding=1';
+    panel.classList.add('open'); btn.classList.add('on'); btn.textContent='🎵 Pausa';
+  } else {
+    frame.src='about:blank';
+    panel.classList.remove('open'); btn.classList.remove('on'); btn.textContent='🎵 Musica';
+  }
+}
+</script>
+</body>
+</html>
