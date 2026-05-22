@@ -297,6 +297,15 @@ textarea.fi{resize:vertical;min-height:80px;}
 .scan-tip{text-align:center;font-size:.75rem;color:var(--text2);
   margin-top:6px;opacity:.7;}
 
+/* ── RICERCA ── */
+.search-loc{font-size:.7rem;color:var(--accent);margin-top:3px;}
+@keyframes shelf-flash{
+  0%,100%{filter:brightness(1);box-shadow:none;}
+  25%,75%{filter:brightness(1.55) saturate(1.3);
+    box-shadow:0 0 18px 4px rgba(255,165,0,.75),inset 0 0 10px rgba(255,200,0,.4);}
+}
+.sc.highlight{animation:shelf-flash 1.8s ease-out;}
+
 /* ══ CAMINETTO ══════════════════════════════════════════════ */
 /* ── CAMINETTO ── */
 .fireplace{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
@@ -558,6 +567,7 @@ textarea.fi{resize:vertical;min-height:80px;}
   <h1>📚 Biblioteca di Casa</h1>
   <div class="hright">
     <span id="conn">⏳ connessione…</span>
+    <button class="btn btn-secondary" onclick="openSearch()" style="background:rgba(255,255,255,.12);border-color:rgba(255,220,150,.4);color:#f5deb3;">🔍 Cerca</button>
     <button class="btn btn-secondary" id="stats-btn" onclick="openStats()" style="background:rgba(255,255,255,.12);border-color:rgba(255,220,150,.4);color:#f5deb3;">📊 Statistiche</button>
     <button class="btn btn-music" id="mbtn" onclick="toggleMusic()">🎵 Musica</button>
     <a href="/logout" style="font-size:.72rem;color:#c4956a;text-decoration:none;padding:4px 10px;border:1px solid rgba(200,150,80,.35);border-radius:12px;white-space:nowrap;" title="Esci">Esci</a>
@@ -619,6 +629,22 @@ textarea.fi{resize:vertical;min-height:80px;}
       <button class="mx" onclick="close1('ov-add')">✕</button>
     </div>
     <div id="add-body"></div>
+  </div>
+</div>
+
+<!-- MODALE RICERCA -->
+<div class="ov" id="ov-search">
+  <div class="modal">
+    <div class="mh">
+      <h2 class="mt">🔍 Cerca un libro</h2>
+      <button class="mx" onclick="close1('ov-search')">✕</button>
+    </div>
+    <div class="fg">
+      <input class="fi" type="text" id="search-q" placeholder="Titolo, autore o ISBN…"
+        oninput="doSearch()"
+        onkeydown="if(event.key==='Escape')close1('ov-search')">
+    </div>
+    <div id="search-results" class="blist"></div>
   </div>
 </div>
 
@@ -850,6 +876,7 @@ function renderBookcases(){
       for(let c=1;c<=bc.cols;c++){
         const isDrw=bc.drawers.some(d=>d.r===r&&d.c===c);
         const cell=document.createElement('div');
+        cell.dataset.bcid=bc.id; cell.dataset.row=r; cell.dataset.col=c;
         if(isDrw){
           cell.className='sc drw';
           cell.innerHTML='<div class="drw-h"></div><div class="drw-l">cassetto</div>';
@@ -1134,6 +1161,12 @@ async function doISBN(){
       document.getElementById('ai-pa').textContent=author;
       pv.classList.add('show');
       st.className='isbn-st ok'; st.textContent='✓ Libro trovato!';
+      const already=BOOKS.find(bk=>bk.isbn&&bk.isbn.replace(/[\s\-]/g,'')===isbn);
+      if(already){
+        const bcObj=BCASES.find(b=>b.id===already.bcId);
+        const loc=bcObj?`${bcObj.name} — Rip.${already.row}, Col.${already.col}`:'?';
+        toast(`⚠️ "${already.title}" è già in biblioteca! (${loc})`);
+      }
     } else {
       st.className='isbn-st err'; st.textContent='✗ ISBN non trovato — compila manualmente.';
     }
@@ -1154,6 +1187,20 @@ async function doSave(){
   const author=document.getElementById('ai-aut').value.trim();
   const year  =document.getElementById('ai-yr').value.trim();
   const isbn  =document.getElementById('ai-isbn').value.trim();
+
+  // Controlla duplicati
+  const dupCheck=BOOKS.find(bk=>
+    bk.id!==(editId||'') && (
+      (isbn && bk.isbn && isbn.replace(/[\s\-]/g,'')===bk.isbn.replace(/[\s\-]/g,'')) ||
+      (title && bk.title?.toLowerCase()===title.toLowerCase() &&
+       author && bk.author?.toLowerCase()===author.toLowerCase())
+    )
+  );
+  if(dupCheck){
+    const bcObj=BCASES.find(b=>b.id===dupCheck.bcId);
+    const loc=bcObj?`${bcObj.name} — Rip.${dupCheck.row}, Col.${dupCheck.col}`:'posizione sconosciuta';
+    if(!confirm(`"${dupCheck.title}" è già in biblioteca!\n📍 Si trova in: ${loc}\n\nAggiungere comunque un duplicato?`)) return;
+  }
 
   if(editId){
     const upd={title,author,year,isbn,bcId,row,col};
@@ -1334,6 +1381,65 @@ async function scanFromFile(input){
     setScanMsg('','❌ Codice non trovato — prova più vicino, con buona luce, tenendo il telefono fermo');
     input.value='';
   }
+}
+
+// ── RICERCA ──────────────────────────────────────────────────────────────────
+function openSearch(){
+  open1('ov-search');
+  const q=document.getElementById('search-q');
+  q.value='';
+  document.getElementById('search-results').innerHTML='';
+  setTimeout(()=>q.focus(),60);
+}
+
+function doSearch(){
+  const q=document.getElementById('search-q').value.trim().toLowerCase();
+  const wrap=document.getElementById('search-results');
+  if(!q){wrap.innerHTML='';return;}
+  const results=BOOKS.filter(bk=>
+    bk.title?.toLowerCase().includes(q)||
+    bk.author?.toLowerCase().includes(q)||
+    bk.isbn?.includes(q)
+  );
+  if(!results.length){wrap.innerHTML='<div class="empty">Nessun libro trovato.</div>';return;}
+  wrap.innerHTML='';
+  results.forEach(bk=>{
+    const bcObj=BCASES.find(b=>b.id===bk.bcId);
+    const loc=bcObj?`${bcObj.name} — Rip.${bk.row} Col.${bk.col}`:'?';
+    const r=document.createElement('div'); r.className='brow';
+    const cov=bk.cover
+      ?`<img class="bthumb" src="${esc(bk.cover)}" alt="" onerror="this.style.display='none'">`
+      :`<div class="bph" style="background:${bk.color||colFor(bk.title)}">📖</div>`;
+    r.innerHTML=`${cov}
+      <div class="binfo">
+        <div class="btit">${esc(bk.title)}</div>
+        <div class="baut">${esc(bk.author||'—')}</div>
+        <div class="search-loc">📍 ${esc(loc)}</div>
+      </div>
+      <div style="color:#ccc;font-size:1.1rem">›</div>`;
+    r.addEventListener('click',()=>goToShelf(bk));
+    wrap.appendChild(r);
+  });
+}
+
+function goToShelf(bk){
+  close1('ov-search');
+  const bcObj=BCASES.find(b=>b.id===bk.bcId);
+  if(!bcObj)return;
+  openShelf(bcObj,bk.row,bk.col);
+  setTimeout(()=>highlightShelf(bk.bcId,bk.row,bk.col),80);
+}
+
+function highlightShelf(bcId,row,col){
+  const target=document.querySelector(
+    `#lib .sc[data-bcid="${bcId}"][data-row="${row}"][data-col="${col}"]`
+  );
+  if(!target)return;
+  target.scrollIntoView({behavior:'smooth',block:'center'});
+  target.classList.remove('highlight');
+  void target.offsetWidth; // forza reflow per ri-triggerare l'animazione
+  target.classList.add('highlight');
+  setTimeout(()=>target.classList.remove('highlight'),1900);
 }
 
 // ── STATISTICHE ───────────────────────────────────────────────────────────────
