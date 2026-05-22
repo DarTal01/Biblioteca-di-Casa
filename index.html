@@ -8,7 +8,7 @@
 :root{
   --wood:#4a2810; --wood2:#7a5230; --wood3:#a07040;
   /* altezza cella: nessun padding → riempie tutto lo schermo */
-  --ch: clamp(64px, calc((100vh - 148px) / 8), 114px);
+  --ch: clamp(64px, calc((100svh - 148px) / 8), 114px);
   --shelf:#c8956a; --drawer:#9a7055;
   --bg:#fdf5e4; --card:#fffdf0;
   --text:#2c1a0e; --text2:#7a5535;
@@ -17,7 +17,8 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{
-  font-family:Georgia,serif;color:var(--text);min-height:100vh;
+  font-family:Georgia,serif;color:var(--text);min-height:100svh;
+  overflow:hidden;overscroll-behavior:none;
   /* Parete rustica: intonaco caldo + mattoni in prospettiva sfumata */
   background-color:#e8d9be;
   background-image:
@@ -69,8 +70,9 @@ header h1{font-size:1.4rem;text-shadow:2px 2px 0 #2e1508;white-space:nowrap;}
   display:flex;
   justify-content:space-between;
   align-items:flex-end;
-  padding:0 80px 0;             /* fondo a terra, come il caminetto */
-  min-height:calc(100vh - 58px);
+  padding:0 80px 0;
+  height:calc(100svh - 58px);
+  overflow:hidden;
   flex-wrap:nowrap;
 }
 /* ── mobile landscape: telefoni piccoli ── */
@@ -271,7 +273,7 @@ textarea.fi{resize:vertical;min-height:80px;}
   0%,40%{transform:rotate(0deg);}
   60%,100%{transform:rotate(90deg);}
 }
-@media screen and (orientation:portrait) and (max-width:900px){
+@media screen and (orientation:portrait) and (pointer:coarse){
   #rotate-msg{display:flex;}
 }
 
